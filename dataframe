@@ -1,0 +1,50 @@
+install.packages("tidyverse")
+library(tidyverse) #me tiraba error porque faltaba actualizar paquete, decia: namespace ârlangâ
+
+# Datos descargados de la base de datos de FAO
+trade_data <- read.csv("C:/Users/Manuel Rubio/Downloads/Trade_DetailedTradeMatrix_E_All_Data_v2.csv")
+ferti_data <- read.csv("C:/Users/Manuel Rubio/Documents/R/Fertilizantes/Insumos_FertilizantesNutriente_S_Todos_los_Datos_NOFLAG.csv")
+View(trade_data)
+View(ferti_data)
+
+#Seleccionar solo columnas (variables) entre 1994 en adelante
+trade_data <- select(trade_data, -(Y1986:Y1993))
+ferti_data <- select(ferti_data, -(Y1961:Y1993))
+
+#Retener solo volumenes exportados, no valores ni importaciones
+trade_data <- trade_data[trade_data$Element=="Export Quantity",]
+
+#Retener solo volumenes de Uso Agricola, no Produccion ni Exp ni Imp
+ferti_data <- ferti_data[ferti_data$Elemento == "Uso Agrícola",]
+
+#Definir valor de filas y columnas para matriz
+nreporter <-  max(trade_data$Reporter.Country.Code)
+npartner <- max(trade_data$Partner.Country.Code)
+
+# Crear data frame con 4 columnas
+flujos  <- data.frame(matrix(ncol = 4, nrow = 0))
+x <- c("año", "reporter", "partner", "vol")
+colnames(flujos) <- x
+
+for (i in 1:nreporter){
+  subset_reporter = NULL
+  subset_reporter <- trade_data[trade_data$Reporter.Country.Code == i, ]
+#  print(paste("Reporter ", i))
+  for (j in 1:npartner){
+    subset_reporter_partner <- subset_reporter[subset_reporter$Partner.Country.Code == j,]
+#    print(paste("Reporter ", i, "Partner ", j))
+     for (k in 10:33){
+       suma_año <- sum(subset_reporter_partner[ , k], na.rm = T)
+       #print(paste("Reporter ", i, "Partner ", j, "Año ", k, año))
+       if(suma_año > 0){
+         linea_datos <- c(i, j, k, suma_año)
+         flujos <- rbind(flujos, linea_datos)
+       }
+     }
+  }
+}
+
+# guardar tablas
+write.table(flujos, "Flujos.txt", row.names = FALSE)
+
+sum_ferti <- tapply(ferti_data$Y1994, ferti_data$Código.área, sum)
